@@ -1,0 +1,7 @@
+{
+  "config": {
+    "telegramToken": "TU_TOKEN_AQUI",
+    "telegramChatId": "TU_CHAT_ID_AQUI"
+  },
+  "tasks": []
+}
