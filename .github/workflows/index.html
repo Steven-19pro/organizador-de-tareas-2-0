@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizador de Tareas Cloud</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: white; border-radius: 20px; padding: 30px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
+        .clock { font-size: 2.5rem; font-weight: bold; color: #667eea; }
+        .date { color: #666; margin-top: 5px; }
+        .btn { 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-danger { background: #f56565; color: white; margin-left: 10px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
+        .input-group input, .input-group textarea { 
+            width: 100%; 
+            padding: 12px; 
+            border: 2px solid #e2e8f0; 
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .input-group input:focus, .input-group textarea:focus { 
+            outline: none; 
+            border-color: #667eea; 
+        }
+        .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-top: 20px; }
+        .calendar-header { text-align: center; font-weight: bold; padding: 10px; color: #667eea; }
+        .calendar-day { 
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .calendar-day:hover { border-color: #667eea; background: #f7fafc; }
+        .calendar-day.today { background: #667eea; color: white; border-color: #667eea; }
+        .calendar-day.selected { background: #edf2f7; border-color: #667eea; border-width: 3px; }
+        .calendar-day.has-tasks::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            width: 6px;
+            height: 6px;
+            background: #48bb78;
+            border-radius: 50%;
+        }
+        .task-list { max-height: 500px; overflow-y: auto; }
+        .task-item {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        .task-item:hover { transform: translateX(5px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .task-item.completed { opacity: 0.6; text-decoration: line-through; border-left-color: #48bb78; }
+        .task-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 5px; }
+        .task-time { color: #666; font-size: 0.9rem; }
+        .task-desc { color: #888; font-size: 0.85rem; margin-top: 5px; }
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .calendar-nav h3 { font-size: 1.3rem; color: #333; }
+        .nav-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .grid { display: grid; gap: 20px; }
+        @media (min-width: 1024px) {
+            .grid { grid-template-columns: 1fr 2fr; }
+        }
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .alert {
+            background: #d1fae5;
+            border-left: 4px solid #48bb78;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .alert-info {
+            background: #dbeafe;
+            border-left-color: #3b82f6;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: #d1fae5;
+            color: #065f46;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="alert alert-info">
+                <strong>☁️ Modo Cloud Activado</strong><br>
+                Tus tareas se guardan en GitHub y los recordatorios se envían automáticamente cada 5 minutos, incluso con el navegador cerrado.
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="header">
+                <div>
+                    <div class="clock" id="clock">00:00:00</div>
+                    <div class="date" id="date"></div>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                    <span class="status-badge">
+                        <span id="syncStatus">🔄 Sincronizando...</span>
+                    </span>
+                    <button class="btn btn-success" onclick="syncNow()">🔄 Sincronizar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <div class="card">
+                    <div class="calendar-nav">
+                        <button class="nav-btn" onclick="previousMonth()">◀</button>
+                        <h3 id="monthYear"></h3>
+                        <button class="nav-btn" onclick="nextMonth()">▶</button>
+                    </div>
+                    <div class="calendar" id="calendar"></div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <h2 style="margin-bottom: 20px;">➕ Nueva Tarea</h2>
+                    <div class="input-group">
+                        <label>Título</label>
+                        <input type="text" id="taskTitle" placeholder="Nombre de la tarea">
+                    </div>
+                    <div class="input-group">
+                        <label>Fecha</label>
+                        <input type="date" id="taskDate">
+                    </div>
+                    <div class="input-group">
+                        <label>Hora</label>
+                        <input type="time" id="taskTime">
+                    </div>
+                    <div class="input-group">
+                        <label>Descripción (opcional)</label>
+                        <textarea id="taskDesc" rows="3" placeholder="Detalles adicionales..."></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="addTask()" style="width: 100%;">Agregar Tarea</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 style="margin-bottom: 20px;" id="taskListTitle">📋 Tareas</h2>
+                <div class="task-list" id="taskList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // IMPORTANTE: Reemplaza con tu usuario y repositorio de GitHub
+        const GITHUB_USER = 'TU_USUARIO_GITHUB';
+        const GITHUB_REPO = 'organizador-tareas';
+        const GITHUB_TOKEN = ''; // Opcional: Para repositorios privados
+
+        let tasks = [];
+        let currentMonth = new Date();
+        let selectedDate = new Date();
+
+        // Cargar tareas desde GitHub
+        async function loadTasks() {
+            try {
+                document.getElementById('syncStatus').textContent = '🔄 Cargando...';
+                
+                const url = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/tasks.json`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                tasks = data.tasks || [];
+                
+                document.getElementById('syncStatus').textContent = '✅ Sincronizado';
+                updateTaskList();
+                renderCalendar();
+            } catch (error) {
+                console.error('Error al cargar tareas:', error);
+                document.getElementById('syncStatus').textContent = '❌ Error';
+                alert('Error al cargar tareas desde GitHub. Asegúrate de haber configurado correctamente tu usuario de GitHub en el código.');
+            }
+        }
+
+        // Sincronizar ahora
+        function syncNow() {
+            loadTasks();
+        }
+
+        // Agregar tarea
+        async function addTask() {
+            const title = document.getElementById('taskTitle').value;
+            const date = document.getElementById('taskDate').value;
+            const time = document.getElementById('taskTime').value;
+            const description = document.getElementById('taskDesc').value;
+
+            if (!title || !date || !time) {
+                alert('Por favor completa título, fecha y hora');
+                return;
+            }
+
+            const newTask = {
+                id: Date.now().toString(),
+                title,
+                date,
+                time,
+                description,
+                completed: false,
+                notified: false
+            };
+
+            alert('⚠️ IMPORTANTE:\n\nPara agregar esta tarea debes:\n1. Ir a tu repositorio en GitHub\n2. Editar el archivo tasks.json\n3. Agregar la tarea manualmente en el array "tasks"\n\nEsto se debe a limitaciones de seguridad de GitHub. Si quieres edición automática, necesitarías configurar un GitHub Personal Access Token.');
+            
+            console.log('Tarea a agregar:', JSON.stringify(newTask, null, 2));
+        }
+
+        // Reloj
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('es-ES');
+            document.getElementById('date').textContent = now.toLocaleDateString('es-ES', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+        }
+
+        // Actualizar lista de tareas
+        function updateTaskList() {
+            const dateStr = selectedDate.toISOString().split('T')[0];
+            const dayTasks = tasks.filter(t => t.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
+            
+            const title = selectedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+            document.getElementById('taskListTitle').textContent = `📋 Tareas del ${title} (${dayTasks.length})`;
+
+            const html = dayTasks.length === 0 
+                ? '<p style="text-align: center; color: #999; padding: 40px;">No hay tareas para este día</p>'
+                : dayTasks.map(task => `
+                    <div class="task-item ${task.completed ? 'completed' : ''}">
+                        <div style="flex: 1;">
+                            <div style="display: inline-block; vertical-align: top;">
+                                <div class="task-title">${task.title}</div>
+                                <div class="task-time">⏰ ${task.time} ${task.notified ? '(✓ Enviado)' : ''}</div>
+                                ${task.description ? `<div class="task-desc">${task.description}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            document.getElementById('taskList').innerHTML = html;
+        }
+
+        // Renderizar calendario
+        function renderCalendar() {
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            document.getElementById('monthYear').textContent = 
+                currentMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+
+            const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            let html = dayNames.map(d => `<div class="calendar-header">${d}</div>`).join('');
+
+            for (let i = 0; i < firstDay; i++) html += '<div></div>';
+
+            const today = new Date();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = date.toISOString().split('T')[0];
+                const hasTasks = tasks.some(t => t.date === dateStr);
+                const isToday = date.toDateString() === today.toDateString();
+                const isSelected = date.toDateString() === selectedDate.toDateString();
+                
+                html += `<div class="calendar-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${hasTasks ? 'has-tasks' : ''}" 
+                              onclick="selectDate(${year}, ${month}, ${day})">${day}</div>`;
+            }
+
+            document.getElementById('calendar').innerHTML = html;
+        }
+
+        function selectDate(year, month, day) {
+            selectedDate = new Date(year, month, day);
+            document.getElementById('taskDate').value = selectedDate.toISOString().split('T')[0];
+            updateTaskList();
+            renderCalendar();
+        }
+
+        function previousMonth() {
+            currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1);
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
+            renderCalendar();
+        }
+
+        // Inicializar
+        loadTasks();
+        updateClock();
+        setInterval(updateClock, 1000);
+        setInterval(loadTasks, 30000); // Sincronizar cada 30 segundos
+        document.getElementById('taskDate').value = new Date().toISOString().split('T')[0];
+    </script>
+</body>
+</html>
